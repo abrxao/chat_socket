@@ -9,74 +9,31 @@ version = '1.0.0'
 repositories {
     mavenCentral()
 }
+
 java {
     toolchain {
-        // Vamos usar o Java 21, que é LTS (Long Term Support) e estável.
-        // O Gradle vai baixar essa versão sozinho se você não tiver.
-        languageVersion = JavaLanguageVersion.of(21) 
+        languageVersion = JavaLanguageVersion.of(21)
     }
-}
-dependencies {
-    // Se você usar bibliotecas externas (Gson, Jackson, etc), coloque aqui.
-    // implementation 'com.google.code.gson:gson:2.10.1'
 }
 
 graalvmNative {
     binaries {
-        // Removemos o bloco 'main' que deu erro.
-        // O Gradle vai focar apenas nos que estamos criando explicitamente abaixo.
-
-        create("server") {
+        main {
+            // Configuração do Java Toolchain
             javaLauncher = javaToolchains.launcherFor {
                 languageVersion = JavaLanguageVersion.of(21)
             }
-            mainClass = 'mychat.ChatServer'
-            imageName = 'ChatServer' 
-        }
 
-        create("client") {
-            javaLauncher = javaToolchains.launcherFor {
-                languageVersion = JavaLanguageVersion.of(21)
+            // Lógica de Decisão: Lê o parâmetro -Ptarget=... do comando
+            def target = project.findProperty('target') ?: 'server' // Padrão é server
+
+            if (target == 'client') {
+                mainClass = 'mychat.ChatClient'
+                imageName = 'ChatClient' // Gera ChatClient.exe
+            } else {
+                mainClass = 'mychat.ChatServer'
+                imageName = 'ChatServer' // Gera ChatServer.exe
             }
-            mainClass = 'mychat.ChatClient'
-            imageName = 'ChatClient' 
         }
     }
 }
-
-// Configuração para gerar o JAR do SERVIDOR
-task serverJar(type: Jar) {
-    archiveBaseName.set('server') // Nome do arquivo final: server-1.0.0.jar
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-
-    manifest {
-        attributes(
-            'Main-Class': 'mychat.ChatServer' // <--- Aponte para sua classe Main do Server
-        )
-    }
-
-    from sourceSets.main.output
-
-    // O bloco abaixo empacota as dependências dentro do JAR (Fat Jar)
-    from {
-        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
-    }
-}
-
-// Configuração para gerar o JAR do CLIENTE
-task clientJar(type: Jar) {
-    archiveBaseName.set('client') // Nome do arquivo final: client-1.0.0.jar
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-
-    manifest {
-        attributes(
-            'Main-Class': 'mychat.ChatClient' // <--- Aponte para sua classe Main do Client
-        )
-    }
-
-    from sourceSets.main.output
-
-    from {
-        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
-    }
-}   

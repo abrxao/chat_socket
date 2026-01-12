@@ -25,11 +25,12 @@ jobs:
         distribution: 'graalvm'
         github-token: ${{ secrets.GITHUB_TOKEN }}
 
+    # Explicitar que queremos o server
     - name: Build Server Native Image
-      run: .\gradlew.bat nativeCompileServer
+      run: .\gradlew.bat nativeCompile -Ptarget=server
 
     - name: Upload Server Executable
       uses: actions/upload-artifact@v4
       with:
         name: chat-server-windows
-        path: build/native/nativeCompileServer/*.exe
+        path: build/native/nativeCompile/*.exe

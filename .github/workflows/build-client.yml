@@ -25,12 +25,13 @@ jobs:
         distribution: 'graalvm'
         github-token: ${{ secrets.GITHUB_TOKEN }}
 
+    # A MÁGICA: Passamos a flag -Ptarget=client
     - name: Build Client Native Image
-      # O comando específico para o binário "client" definido no gradle
-      run: .\gradlew.bat nativeCompileClient
+      run: .\gradlew.bat nativeCompile -Ptarget=client
 
+    # O caminho volta a ser o padrão, pois estamos usando a task 'nativeCompile'
     - name: Upload Client Executable
       uses: actions/upload-artifact@v4
       with:
         name: chat-client-windows
-        path: build/native/nativeCompileClient/*.exe
+        path: build/native/nativeCompile/*.exe
