@@ -1,4 +1,4 @@
-name: Build Server (Windows)
+name: Build Client (Windows)
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-server:
+  build-client:
     runs-on: windows-latest
 
     steps:
@@ -25,11 +25,12 @@ jobs:
         distribution: 'graalvm'
         github-token: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Build Server Native Image
-      run: .\gradlew.bat nativeCompileServer
+    - name: Build Client Native Image
+      # O comando específico para o binário "client" definido no gradle
+      run: .\gradlew.bat nativeCompileClient
 
-    - name: Upload Server Executable
+    - name: Upload Client Executable
       uses: actions/upload-artifact@v4
       with:
-        name: chat-server-windows
-        path: build/native/nativeCompileServer/*.exe
+        name: chat-client-windows
+        path: build/native/nativeCompileClient/*.exe

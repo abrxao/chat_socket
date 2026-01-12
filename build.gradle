@@ -23,11 +23,23 @@ dependencies {
 
 graalvmNative {
     binaries {
-        main {
-            // Escolha qual você quer gerar primeiro. 
-            // Para gerar os dois, a configuração é avançada e exige definir múltiplos binários.
-            mainClass = 'mychat.ChatServer' 
-            imageName = 'ChatServer' // O nome do .exe final
+        // Removemos o bloco 'main' que deu erro.
+        // O Gradle vai focar apenas nos que estamos criando explicitamente abaixo.
+
+        create("server") {
+            javaLauncher = javaToolchains.launcherFor {
+                languageVersion = JavaLanguageVersion.of(21)
+            }
+            mainClass = 'mychat.ChatServer'
+            imageName = 'ChatServer' 
+        }
+
+        create("client") {
+            javaLauncher = javaToolchains.launcherFor {
+                languageVersion = JavaLanguageVersion.of(21)
+            }
+            mainClass = 'mychat.ChatClient'
+            imageName = 'ChatClient' 
         }
     }
 }
