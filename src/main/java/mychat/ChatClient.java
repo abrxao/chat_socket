@@ -5,15 +5,24 @@ import java.net.Socket;
 import java.util.Scanner;
 
 public class ChatClient {
-    private static final int SERVER_PORT = 12345;
-
     private static final String DOWNLOAD_DIR = "downloads";
 
     public static void main(String[] args) {
-        String serverAddress = (args.length > 0) ? args[0] : "127.0.0.1";
+        String serverAddress = "127.0.0.1";
+        int serverPort = 12345;
 
+        if (args.length >= 1) {
+            serverAddress = args[0];
+        }
+        if (args.length >= 2) {
+            try {
+                serverPort = Integer.parseInt(args[1]);
+            } catch (NumberFormatException e) {
+                System.err.println("Porta inválida, usando padrão: " + serverPort);
+            }
+        }
         try {
-            Socket socket = new Socket(serverAddress, SERVER_PORT);
+            Socket socket = new Socket(serverAddress, serverPort);
 
             // Calculamos o caminho absoluto apenas para mostrar ao usuário onde os arquivos
             // vão parar
