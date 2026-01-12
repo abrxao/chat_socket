@@ -1,0 +1,35 @@
+name: Build Windows Native Executable
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up JDK 21
+      uses: actions/setup-java@v3
+      with:
+        java-version: '21'
+        distribution: 'temurin'
+
+    - name: Setup GraalVM
+      uses: graalvm/setup-graalvm@v1
+      with:
+        java-version: '21'
+        distribution: 'graalvm'
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Build Server Native Image
+      run: ./gradlew nativeCompile 
+    
+    - name: Upload Executable
+      uses: actions/upload-artifact@v3
+      with:
+        name: chat-server-windows
+        path: build/native/nativeCompile/*.exe
