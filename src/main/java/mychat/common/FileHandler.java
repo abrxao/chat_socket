@@ -1,4 +1,4 @@
-package mychat;
+package mychat.common;
 
 import java.io.*;
 import java.net.Socket;
@@ -6,7 +6,10 @@ import java.util.Map;
 
 public class FileHandler {
 
-    // Cliente/Server ENVIANDO
+    /**
+     * Sends a file through the DataOutputStream.
+     * Includes a header with type, filename, and file size.
+     */
     public static void sendFile(DataOutputStream dos, File file) throws IOException {
         dos.writeByte(ChatProtocol.TYPE_FILE);
         dos.writeUTF(file.getName());
@@ -18,38 +21,46 @@ public class FileHandler {
             while ((read = fis.read(buffer)) != -1) {
                 dos.write(buffer, 0, read);
             }
-        }
+        }   
         dos.flush();
-        System.out.println("Arquivo enviado: " + file.getName());
     }
 
-    // Cliente RECEBENDO (Salva no disco)
-    public static void saveFile(DataInputStream dis, String baseDir) throws IOException {
+    /**
+     * Receives a file from the DataInputStream and saves it to the specified directory.
+     * Returns the name of the saved file.
+     */
+    public static String receiveFile(DataInputStream dis, String saveDir) throws IOException {
         String fileName = dis.readUTF();
         long size = dis.readLong();
 
-        File dir = new File(baseDir);
-        if (!dir.exists())
+        File dir = new File(saveDir);
+        if (!dir.exists()) {
             dir.mkdirs();
-        File file = new File(dir, fileName);
-
-        System.out.println("Recebendo arquivo: " + fileName);
-
-        try (FileOutputStream fos = new FileOutputStream(file)) {
-            streamBytes(dis, new DataOutputStream(fos), size, false); // false = não envia cabeçalho de novo
         }
-        System.out.println("Arquivo salvo em: " + file.getAbsolutePath());
+
+        File file = new File(dir, fileName);
+        try (FileOutputStream fos = new FileOutputStream(file)) {
+            byte[] buffer = new byte[4096];
+            int read;
+            long totalRead = 0;
+            
+            while (totalRead < size && (read = dis.read(buffer, 0, (int) Math.min(buffer.length, size - totalRead))) != -1) {
+                fos.write(buffer, 0, read);
+                totalRead += read;
+            }
+        }
+        return fileName;
     }
 
-    // Servidor RETRANSMITINDO (Lê de um, escreve para vários)
+    /**
+     * Server-side relay: Reads a file from one client and streams it to all others.
+     * This avoids loading the entire file into memory by using a streaming buffer.
+     */
     public static void relayFile(DataInputStream dis, Socket sender, Map<Socket, String> clients) throws IOException {
         String fileName = dis.readUTF();
         long size = dis.readLong();
-        String senderName = clients.get(sender);
 
-        System.out.println("Relay de arquivo iniciado: " + fileName + " de " + senderName);
-
-        // 1. Avisar todos os destinatários (Header)
+        // Step 1: Send the file header to all recipients
         for (Socket target : clients.keySet()) {
             if (target != sender) {
                 try {
@@ -59,24 +70,21 @@ public class FileHandler {
                     dos.writeLong(size);
                     dos.flush();
                 } catch (IOException e) {
-                    /* Tratar desconexão */ }
+                    // Specific client delivery failure handled silently
+                }
             }
         }
 
-        // 2. Transferir o corpo (Body)
-        // Criamos um buffer temporário para ler do remetente e escrever nos
-        // destinatários
+        // Step 2: Stream the file body in chunks
         byte[] buffer = new byte[4096];
         long totalRead = 0;
 
         while (totalRead < size) {
             int remaining = (int) (size - totalRead);
             int read = dis.read(buffer, 0, Math.min(buffer.length, remaining));
-            if (read == -1)
-                break;
+            if (read == -1) break;
             totalRead += read;
 
-            // Escreve o pedaço lido para todos
             for (Socket target : clients.keySet()) {
                 if (target != sender) {
                     try {
@@ -84,15 +92,10 @@ public class FileHandler {
                         targetDos.write(buffer, 0, read);
                         targetDos.flush();
                     } catch (IOException e) {
-                        /* Ignorar erro de cliente único */ }
+                        // Ignore individual target failures
+                    }
                 }
             }
         }
-        System.out.println("Relay de arquivo concluído.");
-    }
-
-    // Método auxiliar privado para mover bytes de um stream para outro
-    private static void streamBytes(InputStream in, OutputStream out, long size, boolean closeOut) throws IOException {
-        // Lógica genérica de streaming se quiser reutilizar
     }
 }

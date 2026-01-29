@@ -1,5 +1,6 @@
 plugins {
     id 'java'
+    id 'application' 
     id 'org.graalvm.buildtools.native' version '0.9.28'
 }
 
@@ -16,24 +17,83 @@ java {
     }
 }
 
+def serverMainClass = 'mychat.server.ChatServer'
+def clientMainClass = 'mychat.client.ChatClient'
+
+application {
+    mainClass = serverMainClass
+}
+
+task runServer(type: JavaExec) {
+    group = 'application'
+    description = 'Run server (Dev)'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = serverMainClass
+    standardInput = System.in
+}
+
+task runClient(type: JavaExec) {
+    group = 'application'
+    description = 'Run client GUI (Dev)'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = clientMainClass
+    
+    args = ['127.0.0.1', '12345']
+    standardInput = System.in
+}
+
 graalvmNative {
     binaries {
         main {
-            // Configuração do Java Toolchain
             javaLauncher = javaToolchains.launcherFor {
                 languageVersion = JavaLanguageVersion.of(21)
             }
 
-            // Lógica de Decisão: Lê o parâmetro -Ptarget=... do comando
-            def target = project.findProperty('target') ?: 'server' // Padrão é server
+            def target = project.findProperty('target') ?: 'server'
 
             if (target == 'client') {
-                mainClass = 'mychat.ChatClient'
-                imageName = 'ChatClient' // Gera ChatClient.exe
+                mainClass = clientMainClass
+                imageName = 'ChatClient'
+                
+                buildArgs.add('--initialize-at-build-time=mychat.client.ClientGUI') 
             } else {
-                mainClass = 'mychat.ChatServer'
-                imageName = 'ChatServer' // Gera ChatServer.exe
+                mainClass = serverMainClass
+                imageName = 'ChatServer'
             }
         }
+    }
+}
+
+task serverJar(type: Jar) {
+    group = 'build'
+    archiveBaseName.set('server') 
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+    manifest {
+        attributes(
+            'Main-Class': serverMainClass
+        )
+    }
+
+    from sourceSets.main.output
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+}
+
+task clientJar(type: Jar) {
+    group = 'build'
+    archiveBaseName.set('client')
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+    manifest {
+        attributes(
+            'Main-Class': clientMainClass
+        )
+    }
+
+    from sourceSets.main.output
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
     }
 }
